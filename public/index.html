@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Family Tree</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        [v-cloak] { display: none; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen text-gray-800">
+    <div id="app" v-cloak :style="{ fontFamily: settings.fontFamily || 'Arial', color: settings.fontColor || '#333', fontSize: settings.fontSize || '16px' }">
+        <!-- Header -->
+        <header class="bg-white shadow-md mb-6 sticky top-0 z-50">
+            <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+                <h1 class="font-bold text-gray-800" :style="{ fontSize: 'calc(' + (settings.fontSize || '16px') + ' * 1.5)' }">
+                    <i class="fa-solid fa-tree text-green-600 mr-2"></i>{{ settings.treeTitle || 'Our Family Tree' }}
+                </h1>
+
+                <!-- Mobile menu button -->
+                <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden text-gray-600 hover:text-gray-900">
+                    <i class="fa-solid" :class="mobileMenuOpen ? 'fa-xmark' : 'fa-bars'"></i>
+                </button>
+
+                <!-- Desktop Navigation -->
+                <nav class="hidden md:flex space-x-6">
+                    <button @click="currentPage = 'view'" :class="{'text-blue-600 border-b-2 border-blue-600 font-semibold': currentPage === 'view', 'text-gray-600 hover:text-blue-600': currentPage !== 'view'}" class="pb-1 transition-colors">
+                        <i class="fa-solid fa-eye mr-1"></i> View Tree
+                    </button>
+                    <button @click="currentPage = 'suggest'" :class="{'text-blue-600 border-b-2 border-blue-600 font-semibold': currentPage === 'suggest', 'text-gray-600 hover:text-blue-600': currentPage !== 'suggest'}" class="pb-1 transition-colors">
+                        <i class="fa-solid fa-lightbulb mr-1"></i> Suggestion
+                    </button>
+                    <button @click="currentPage = 'admin'" :class="{'text-blue-600 border-b-2 border-blue-600 font-semibold': currentPage === 'admin', 'text-gray-600 hover:text-blue-600': currentPage !== 'admin'}" class="pb-1 transition-colors">
+                        <i class="fa-solid fa-gear mr-1"></i> Admin
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Mobile Navigation -->
+            <div v-show="mobileMenuOpen" class="md:hidden bg-white border-t pb-2 shadow-inner">
+                <div class="flex flex-col px-4 pt-2 space-y-2">
+                    <button @click="currentPage = 'view'; mobileMenuOpen = false" :class="{'bg-blue-50 text-blue-600 font-semibold': currentPage === 'view', 'text-gray-600': currentPage !== 'view'}" class="p-2 text-left rounded transition-colors">
+                        <i class="fa-solid fa-eye w-6"></i> View Tree
+                    </button>
+                    <button @click="currentPage = 'suggest'; mobileMenuOpen = false" :class="{'bg-blue-50 text-blue-600 font-semibold': currentPage === 'suggest', 'text-gray-600': currentPage !== 'suggest'}" class="p-2 text-left rounded transition-colors">
+                        <i class="fa-solid fa-lightbulb w-6"></i> Suggestion
+                    </button>
+                    <button @click="currentPage = 'admin'; mobileMenuOpen = false" :class="{'bg-blue-50 text-blue-600 font-semibold': currentPage === 'admin', 'text-gray-600': currentPage !== 'admin'}" class="p-2 text-left rounded transition-colors">
+                        <i class="fa-solid fa-gear w-6"></i> Admin
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="container mx-auto px-4 pb-12">
+
+
+            <!-- View Tree Page -->
+            <div v-if="currentPage === 'view'" class="w-full">
+                <div class="flex justify-between items-end mb-4">
+                    <h2 class="text-2xl font-semibold">Tree Visualization</h2>
+                    <!-- Legend -->
+                    <div class="bg-white p-3 rounded shadow text-sm border">
+                        <h4 class="font-bold mb-2">Legend</h4>
+                        <div class="flex items-center space-x-4">
+                            <div class="flex items-center">
+                                <svg width="30" height="10" class="mr-2">
+                                    <line x1="0" y1="5" x2="30" y2="5" :stroke="settings.lineColor" stroke-width="2" :stroke-dasharray="getDashArray(settings.parentChildLineStyle)" />
+                                </svg>
+                                <span>Parent / Child</span>
+                            </div>
+                            <div class="flex items-center">
+                                <svg width="30" height="10" class="mr-2">
+                                    <line x1="0" y1="5" x2="30" y2="5" :stroke="settings.lineColor" stroke-width="2" :stroke-dasharray="getDashArray(settings.spouseLineStyle)" />
+                                </svg>
+                                <span>Spouse</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow overflow-hidden relative border border-gray-200" style="min-height: 600px; width: 100%; overflow-x: auto;">
+                    <div v-if="treeData.length === 0 && !loadingTree" class="absolute inset-0 flex items-center justify-center text-gray-500">
+                        No family members added yet. Go to Admin to add people.
+                    </div>
+
+                    <div v-else class="relative p-8 min-w-max" id="tree-container">
+                        <!-- SVG Layer for drawing lines -->
+                        <svg class="absolute inset-0 pointer-events-none" style="width: 100%; height: 100%; z-index: 0;">
+                            <g v-for="line in treeLines" :key="line.id">
+                                <!-- Spouse Line -->
+                                <line v-if="line.type === 'spouse'"
+                                    :x1="line.x1" :y1="line.y1" :x2="line.x2" :y2="line.y2"
+                                    :stroke="settings.lineColor" stroke-width="2"
+                                    :stroke-dasharray="getDashArray(settings.spouseLineStyle)" />
+
+                                <!-- Parent Child Path (Orthogonal routing) -->
+                                <path v-if="line.type === 'parent_child'"
+                                    :d="`M ${line.x1} ${line.y1} V ${line.y1 + 20} H ${line.x2} V ${line.y2}`"
+                                    fill="none"
+                                    :stroke="settings.lineColor" stroke-width="2"
+                                    :stroke-dasharray="getDashArray(settings.parentChildLineStyle)" />
+                            </g>
+                        </svg>
+
+                        <!-- Tree Nodes Rendered Recursively -->
+                        <div class="relative z-10 flex flex-col items-center">
+                            <tree-node v-for="(node, index) in treeData" :key="node.id"
+                                :node="node"
+                                :settings="settings"
+                                @select-person="selectedPerson = $event"
+                                class="mb-12"
+                                :is-root="true" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Person Details Modal -->
+            <div v-if="selectedPerson" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6 relative">
+                    <button @click="selectedPerson = null" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+
+                    <div class="text-center border-b pb-4 mb-4">
+                        <div class="w-20 h-20 bg-blue-100 text-blue-600 rounded-full mx-auto flex items-center justify-center text-3xl mb-3 shadow-inner">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold" :style="{ color: settings.fontColor, fontFamily: settings.fontFamily }">
+                            {{ selectedPerson.firstName }} {{ selectedPerson.lastName }}
+                        </h3>
+                        <p class="text-gray-600 text-sm mt-1">
+                            {{ selectedPerson.birthYear || '?' }} - {{ selectedPerson.deathYear || 'Present' }}
+                        </p>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div v-if="selectedPersonDetails.parents.length">
+                            <span class="font-semibold text-gray-700">Child of: </span>
+                            <span class="text-gray-600">{{ selectedPersonDetails.parents.map(p => p.firstName + ' ' + p.lastName).join(', ') }}</span>
+                        </div>
+                        <div v-if="selectedPersonDetails.spouses.length">
+                            <span class="font-semibold text-gray-700">Spouse of: </span>
+                            <span class="text-gray-600">{{ selectedPersonDetails.spouses.map(p => p.firstName + ' ' + p.lastName).join(', ') }}</span>
+                        </div>
+                        <div v-if="selectedPersonDetails.children.length">
+                            <span class="font-semibold text-gray-700">Parent of: </span>
+                            <span class="text-gray-600">{{ selectedPersonDetails.children.map(p => p.firstName + ' ' + p.lastName).join(', ') }}</span>
+                        </div>
+                        <div v-if="!selectedPersonDetails.parents.length && !selectedPersonDetails.spouses.length && !selectedPersonDetails.children.length" class="text-gray-500 italic text-center pt-2">
+                            No known relationships.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Suggestion Page -->
+            <div v-if="currentPage === 'suggest'" class="w-full max-w-2xl mx-auto">
+                <h2 class="text-2xl mb-4 font-semibold">Suggest an Addition</h2>
+                <div class="bg-white p-6 rounded-lg shadow">
+                    <p class="text-gray-600 mb-6">Know someone missing from the tree or a missing relationship? Submit a suggestion below, and it will be sent to the admin for review.</p>
+
+                    <form @submit.prevent="submitSuggestion">
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium mb-1">What kind of suggestion is this?</label>
+                            <select v-model="newSuggestion.type" class="w-full border rounded p-2">
+                                <option value="add_person">Add a New Person</option>
+                                <option value="add_relationship">Add a Relationship</option>
+                                <option value="other">Other/Correction</option>
+                            </select>
+                        </div>
+
+                        <!-- Add Person Form -->
+                        <div v-if="newSuggestion.type === 'add_person'" class="bg-gray-50 p-4 rounded border mb-4 space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">First Name *</label>
+                                    <input type="text" v-model="newSuggestion.data.firstName" class="w-full border rounded p-2" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Last Name *</label>
+                                    <input type="text" v-model="newSuggestion.data.lastName" class="w-full border rounded p-2" required>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Birth Year</label>
+                                    <input type="number" v-model="newSuggestion.data.birthYear" class="w-full border rounded p-2">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Death Year</label>
+                                    <input type="number" v-model="newSuggestion.data.deathYear" class="w-full border rounded p-2">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">How are they related to the family?</label>
+                                <textarea v-model="newSuggestion.data.notes" class="w-full border rounded p-2 h-20" placeholder="e.g., Son of John Doe"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Add Relationship Form -->
+                        <div v-if="newSuggestion.type === 'add_relationship'" class="bg-gray-50 p-4 rounded border mb-4 space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Relationship Details</label>
+                                <textarea v-model="newSuggestion.data.details" class="w-full border rounded p-2 h-24" placeholder="Please describe the relationship. For example: Jane Smith is the spouse of John Doe, or Mark Johnson is the child of Mary Johnson." required></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Other Form -->
+                        <div v-if="newSuggestion.type === 'other'" class="bg-gray-50 p-4 rounded border mb-4 space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Details/Correction</label>
+                                <textarea v-model="newSuggestion.data.details" class="w-full border rounded p-2 h-24" placeholder="Describe the correction or addition needed..." required></textarea>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium mb-1">Your Name (Optional)</label>
+                            <input type="text" v-model="newSuggestion.suggesterName" class="w-full border rounded p-2">
+                        </div>
+
+                        <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition">Submit Suggestion</button>
+
+                        <p v-if="suggestionStatus" class="mt-4 text-center font-medium" :class="{'text-green-600': suggestionStatus.success, 'text-red-600': !suggestionStatus.success}">
+                            {{ suggestionStatus.message }}
+                        </p>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Admin Page placeholder -->
+            <div v-if="currentPage === 'admin'" class="w-full max-w-4xl mx-auto">
+                <div v-if="!isAdminAuthenticated" class="bg-white p-6 rounded-lg shadow max-w-md mx-auto mt-10">
+                    <h2 class="text-xl mb-4 font-semibold text-center">Admin Login</h2>
+                    <form @submit.prevent="loginAdmin">
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                            <input type="password" v-model="adminPassword" class="w-full border rounded p-2 focus:ring-blue-500 focus:border-blue-500" required>
+                        </div>
+                        <p v-if="loginError" class="text-red-500 text-sm mb-4">{{ loginError }}</p>
+                        <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition">Login</button>
+                    </form>
+                </div>
+
+
+                <div v-else>
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-semibold">Admin Dashboard</h2>
+                        <button @click="logoutAdmin" class="text-sm text-red-600 hover:text-red-800"><i class="fa-solid fa-right-from-bracket mr-1"></i> Logout</button>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Settings Panel -->
+                        <div class="bg-white p-6 rounded-lg shadow">
+                            <h3 class="text-xl font-semibold mb-4 border-b pb-2">Tree Styling & Settings</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Tree Title</label>
+                                    <input type="text" v-model="settings.treeTitle" class="w-full border rounded p-2">
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">Font Family</label>
+                                        <select v-model="settings.fontFamily" class="w-full border rounded p-2">
+                                            <option value="Arial, sans-serif">Arial</option>
+                                            <option value="'Times New Roman', serif">Times New Roman</option>
+                                            <option value="'Courier New', monospace">Courier New</option>
+                                            <option value="Georgia, serif">Georgia</option>
+                                            <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">Font Size (Base)</label>
+                                        <input type="text" v-model="settings.fontSize" class="w-full border rounded p-2" placeholder="e.g., 16px">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">Text Color</label>
+                                        <input type="color" v-model="settings.fontColor" class="w-full h-10 border rounded cursor-pointer">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">Line Color</label>
+                                        <input type="color" v-model="settings.lineColor" class="w-full h-10 border rounded cursor-pointer">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">Parent/Child Line</label>
+                                        <select v-model="settings.parentChildLineStyle" class="w-full border rounded p-2">
+                                            <option value="solid">Solid</option>
+                                            <option value="dashed">Dashed</option>
+                                            <option value="dotted">Dotted</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">Spouse Line</label>
+                                        <select v-model="settings.spouseLineStyle" class="w-full border rounded p-2">
+                                            <option value="solid">Solid</option>
+                                            <option value="dashed">Dashed</option>
+                                            <option value="dotted">Dotted</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <button @click="saveSettings" class="mt-4 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 w-full transition">Save Settings</button>
+                                <p v-if="settingsSaveMessage" class="text-sm text-green-600 mt-2 text-center">{{ settingsSaveMessage }}</p>
+                            </div>
+                        </div>
+
+                        <!-- Suggestions Panel -->
+                        <div class="bg-white p-6 rounded-lg shadow">
+                            <h3 class="text-xl font-semibold mb-4 border-b pb-2">Pending Suggestions <span class="bg-red-500 text-white text-xs px-2 py-1 rounded-full ml-2">{{ suggestions.length }}</span></h3>
+                            <div v-if="suggestions.length === 0" class="text-gray-500 italic">No pending suggestions.</div>
+                            <div v-else class="space-y-4 max-h-96 overflow-y-auto pr-2">
+                                <div v-for="sug in suggestions" :key="sug.id" class="border rounded p-4 bg-gray-50">
+                                    <div class="text-sm mb-2 whitespace-pre-wrap">{{ formatSuggestionData(sug.data) }}</div>
+                                    <div class="flex space-x-2 mt-3">
+                                        <button @click="handleSuggestion(sug.id, 'approved')" class="flex-1 bg-green-500 text-white py-1 px-2 rounded hover:bg-green-600 text-sm transition">Approve</button>
+                                        <button @click="handleSuggestion(sug.id, 'rejected')" class="flex-1 bg-red-500 text-white py-1 px-2 rounded hover:bg-red-600 text-sm transition">Reject</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Manage People -->
+                        <div class="bg-white p-6 rounded-lg shadow lg:col-span-2">
+                            <h3 class="text-xl font-semibold mb-4 border-b pb-2">Manage People</h3>
+                            <form @submit.prevent="addPerson" class="mb-6 bg-gray-50 p-4 rounded border">
+                                <h4 class="font-medium mb-3">Add New Person</h4>
+                                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                    <div><input type="text" v-model="newPerson.firstName" placeholder="First Name" class="w-full border rounded p-2" required></div>
+                                    <div><input type="text" v-model="newPerson.lastName" placeholder="Last Name" class="w-full border rounded p-2" required></div>
+                                    <div><input type="number" v-model="newPerson.birthYear" placeholder="Birth Year" class="w-full border rounded p-2"></div>
+                                    <div><input type="number" v-model="newPerson.deathYear" placeholder="Death Year" class="w-full border rounded p-2"></div>
+                                </div>
+                                <button type="submit" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">Add Person</button>
+                            </form>
+
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-gray-100 border-b">
+                                            <th class="p-2">Name</th>
+                                            <th class="p-2">Years</th>
+                                            <th class="p-2">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="p in people" :key="p.id" class="border-b hover:bg-gray-50">
+                                            <td class="p-2">{{ p.firstName }} {{ p.lastName }}</td>
+                                            <td class="p-2">{{ p.birthYear || '?' }} - {{ p.deathYear || 'Present' }}</td>
+                                            <td class="p-2">
+                                                <button @click="deletePerson(p.id)" class="text-red-600 hover:text-red-800 text-sm"><i class="fa-solid fa-trash"></i> Delete</button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Manage Relationships -->
+                        <div class="bg-white p-6 rounded-lg shadow lg:col-span-2">
+                            <h3 class="text-xl font-semibold mb-4 border-b pb-2">Manage Relationships</h3>
+                            <form @submit.prevent="addRelationship" class="mb-6 bg-gray-50 p-4 rounded border">
+                                <h4 class="font-medium mb-3">Add Relationship</h4>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label class="block text-xs text-gray-500">Person 1 (Parent/Spouse)</label>
+                                        <select v-model="newRel.person1Id" class="w-full border rounded p-2" required>
+                                            <option v-for="p in people" :value="p.id">{{ p.firstName }} {{ p.lastName }}</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-gray-500">Relationship Type</label>
+                                        <select v-model="newRel.type" class="w-full border rounded p-2" required>
+                                            <option value="parent_child">Parent -> Child</option>
+                                            <option value="spouse">Spouse <-> Spouse</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-gray-500">Person 2 (Child/Spouse)</label>
+                                        <select v-model="newRel.person2Id" class="w-full border rounded p-2" required>
+                                            <option v-for="p in people" :value="p.id">{{ p.firstName }} {{ p.lastName }}</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <button type="submit" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">Add Relationship</button>
+                            </form>
+
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-gray-100 border-b">
+                                            <th class="p-2">Person 1</th>
+                                            <th class="p-2">Type</th>
+                                            <th class="p-2">Person 2</th>
+                                            <th class="p-2">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="r in relationships" :key="r.id" class="border-b hover:bg-gray-50">
+                                            <td class="p-2">{{ getPersonName(r.person1Id) }}</td>
+                                            <td class="p-2">
+                                                <span v-if="r.type === 'parent_child'" class="text-blue-600"><i class="fa-solid fa-arrow-right"></i> Parent of</span>
+                                                <span v-else class="text-pink-600"><i class="fa-solid fa-arrows-left-right"></i> Spouse of</span>
+                                            </td>
+                                            <td class="p-2">{{ getPersonName(r.person2Id) }}</td>
+                                            <td class="p-2">
+                                                <button @click="deleteRelationship(r.id)" class="text-red-600 hover:text-red-800 text-sm"><i class="fa-solid fa-trash"></i> Delete</button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        const { createApp, ref, onMounted } = Vue;
+
+
+        const TreeNode = {
+            name: 'TreeNode',
+            props: ['node', 'settings', 'isRoot'],
+            template: `
+                <div class="flex flex-col items-center relative tree-node-wrapper">
+                    <!-- Main Person + Spouses Container -->
+                    <div class="flex items-center space-x-8 mb-8 relative" :id="'node-group-' + node.id">
+
+                        <!-- The Node -->
+                        <div :id="'person-' + node.id"
+                             @click="$emit('select-person', node)"
+                             class="person-card w-40 bg-white border-2 border-blue-200 rounded-lg p-3 text-center shadow hover:shadow-md cursor-pointer transition transform hover:-translate-y-1 relative z-10"
+                             :style="{ borderColor: settings.lineColor }">
+                            <div class="font-bold truncate" :style="{ color: settings.fontColor, fontFamily: settings.fontFamily }">{{ node.firstName }} {{ node.lastName }}</div>
+                            <div class="text-xs text-gray-500 mt-1">{{ node.birthYear || '?' }} - {{ node.deathYear || '' }}</div>
+                        </div>
+
+                        <!-- Spouses -->
+                        <div v-for="spouse in node.spouses" :key="'spouse-'+spouse.id"
+                             :id="'person-' + spouse.id"
+                             @click="$emit('select-person', spouse)"
+                             class="person-card w-40 bg-white border-2 border-pink-200 rounded-lg p-3 text-center shadow hover:shadow-md cursor-pointer transition transform hover:-translate-y-1 relative z-10"
+                             :style="{ borderColor: settings.lineColor }">
+                            <div class="font-bold truncate" :style="{ color: settings.fontColor, fontFamily: settings.fontFamily }">{{ spouse.firstName }} {{ spouse.lastName }}</div>
+                            <div class="text-xs text-gray-500 mt-1">{{ spouse.birthYear || '?' }} - {{ spouse.deathYear || '' }}</div>
+                        </div>
+                    </div>
+
+                    <!-- Children container -->
+                    <div v-if="node.children && node.children.length > 0" class="flex space-x-8 relative pt-4">
+                        <tree-node v-for="child in node.children" :key="child.id"
+                            :node="child"
+                            :settings="settings"
+                            @select-person="$emit('select-person', $event)" />
+                    </div>
+                </div>
+            `
+        };
+
+        createApp({
+            setup() {
+                const currentPage = ref('view');
+                const mobileMenuOpen = ref(false);
+                const settings = ref({});
+
+                const adminPassword = ref('');
+                const isAdminAuthenticated = ref(false);
+                const loginError = ref('');
+
+
+
+                const treeData = ref([]);
+                const treeLines = ref([]);
+                const loadingTree = ref(true);
+                const publicPeople = ref([]);
+                const publicRelationships = ref([]);
+                const selectedPerson = ref(null);
+                const selectedPersonDetails = ref({ parents: [], spouses: [], children: [] });
+
+                const fetchPublicTreeData = async () => {
+                    loadingTree.value = true;
+                    try {
+                        const pRes = await fetch('/api/people');
+                        publicPeople.value = await pRes.json();
+
+                        const rRes = await fetch('/api/relationships');
+                        publicRelationships.value = await rRes.json();
+
+                        buildTree();
+                    } catch (e) {
+                        console.error("Failed to load tree data", e);
+                    }
+                    loadingTree.value = false;
+                };
+
+                const buildTree = () => {
+                    // Reset
+                    treeLines.value = [];
+
+                    if (publicPeople.value.length === 0) {
+                        treeData.value = [];
+                        return;
+                    }
+
+                    const peopleMap = new Map();
+                    publicPeople.value.forEach(p => {
+                        peopleMap.set(p.id, { ...p, children: [], spouses: [], isChild: false, isSpouseProcessed: false });
+                    });
+
+                    // Map relationships
+                    publicRelationships.value.forEach(r => {
+                        if (r.type === 'parent_child') {
+                            const parent = peopleMap.get(r.person1Id);
+                            const child = peopleMap.get(r.person2Id);
+                            if (parent && child) {
+                                parent.children.push(child);
+                                child.isChild = true;
+                            }
+                        } else if (r.type === 'spouse') {
+                            const p1 = peopleMap.get(r.person1Id);
+                            const p2 = peopleMap.get(r.person2Id);
+                            if (p1 && p2) {
+                                // Ensure we don't render duplicates by making p1 the primary node if neither is a child yet
+                                if (!p1.spouses.find(s => s.id === p2.id)) p1.spouses.push(p2);
+                                // Mark p2 as "handled as spouse" so it doesn't appear as a root node
+                                p2.isSpouseProcessed = true;
+                                // Also merge children if they have any, just for rendering logic to not lose them
+                                p2.children.forEach(c => {
+                                   if (!p1.children.find(existing => existing.id === c.id)) {
+                                       p1.children.push(c);
+                                   }
+                                });
+                            }
+                        }
+                    });
+
+                    // Find roots (people who are not children of anyone, and not just acting as spouses to a root)
+                    const roots = [];
+                    peopleMap.forEach(p => {
+                        if (!p.isChild && !p.isSpouseProcessed) {
+                            roots.push(p);
+                        }
+                    });
+
+                    // If no clear roots due to cycles, just take the first person
+                    if (roots.length === 0 && publicPeople.value.length > 0) {
+                        roots.push(peopleMap.get(publicPeople.value[0].id));
+                    }
+
+                    treeData.value = roots;
+
+                    // Delay line calculation to allow Vue to render the DOM
+                    setTimeout(calculateLines, 100);
+                };
+
+                const calculateLines = () => {
+                    const lines = [];
+                    const container = document.getElementById('tree-container');
+                    if (!container) return;
+                    const containerRect = container.getBoundingClientRect();
+
+                    const getCenterBottom = (el) => {
+                        const rect = el.getBoundingClientRect();
+                        return { x: rect.left + rect.width / 2 - containerRect.left + container.scrollLeft, y: rect.bottom - containerRect.top + container.scrollTop };
+                    };
+                    const getCenterTop = (el) => {
+                        const rect = el.getBoundingClientRect();
+                        return { x: rect.left + rect.width / 2 - containerRect.left + container.scrollLeft, y: rect.top - containerRect.top + container.scrollTop };
+                    };
+                    const getCenterRight = (el) => {
+                        const rect = el.getBoundingClientRect();
+                        return { x: rect.right - containerRect.left + container.scrollLeft, y: rect.top + rect.height / 2 - containerRect.top + container.scrollTop };
+                    };
+                    const getCenterLeft = (el) => {
+                        const rect = el.getBoundingClientRect();
+                        return { x: rect.left - containerRect.left + container.scrollLeft, y: rect.top + rect.height / 2 - containerRect.top + container.scrollTop };
+                    };
+
+                    publicRelationships.value.forEach((r, idx) => {
+                        const el1 = document.getElementById('person-' + r.person1Id);
+                        const el2 = document.getElementById('person-' + r.person2Id);
+                        if (!el1 || !el2) return;
+
+                        if (r.type === 'parent_child') {
+                            const p1b = getCenterBottom(el1);
+                            const p2t = getCenterTop(el2);
+                            lines.push({ id: 'rel-'+r.id+'-'+idx, type: 'parent_child', x1: p1b.x, y1: p1b.y, x2: p2t.x, y2: p2t.y - 16 }); // -16 offsets padding from flex
+                        } else if (r.type === 'spouse') {
+                            const p1r = getCenterRight(el1);
+                            const p2l = getCenterLeft(el2);
+                            // If they are rendered next to each other
+                            if (p1r.x < p2l.x) {
+                                lines.push({ id: 'rel-'+r.id+'-'+idx, type: 'spouse', x1: p1r.x, y1: p1r.y, x2: p2l.x, y2: p2l.y });
+                            } else {
+                                // Fallback just connect centers
+                                const c1 = getCenterBottom(el1);
+                                const c2 = getCenterBottom(el2);
+                                lines.push({ id: 'rel-'+r.id+'-'+idx, type: 'spouse', x1: c1.x, y1: c1.y-20, x2: c2.x, y2: c2.y-20 });
+                            }
+                        }
+                    });
+
+                    treeLines.value = lines;
+                };
+
+                // Watchers for resize or page change to recalculate lines
+                window.addEventListener('resize', () => {
+                    if (currentPage.value === 'view') setTimeout(calculateLines, 100);
+                });
+
+                Vue.watch(currentPage, (newVal) => {
+                    if (newVal === 'view') {
+                        fetchPublicTreeData();
+                    }
+                });
+
+                Vue.watch(selectedPerson, (person) => {
+                    if (person) {
+                        const parents = [];
+                        const children = [];
+                        const spouses = [];
+
+                        publicRelationships.value.forEach(r => {
+                            if (r.type === 'parent_child') {
+                                if (r.person2Id === person.id) parents.push(publicPeople.value.find(p => p.id === r.person1Id));
+                                if (r.person1Id === person.id) children.push(publicPeople.value.find(p => p.id === r.person2Id));
+                            } else if (r.type === 'spouse') {
+                                if (r.person1Id === person.id) spouses.push(publicPeople.value.find(p => p.id === r.person2Id));
+                                if (r.person2Id === person.id) spouses.push(publicPeople.value.find(p => p.id === r.person1Id));
+                            }
+                        });
+
+                        selectedPersonDetails.value = {
+                            parents: parents.filter(Boolean),
+                            children: children.filter(Boolean),
+                            spouses: spouses.filter(Boolean)
+                        };
+                    }
+                });
+
+                const getDashArray = (style) => {
+                    if (style === 'dashed') return '5,5';
+                    if (style === 'dotted') return '2,4';
+                    return 'none';
+                };
+
+
+                const fetchSettings = async () => {
+                    try {
+                        const response = await fetch('/api/settings');
+                        settings.value = await response.json();
+                    } catch (error) {
+                        console.error("Failed to fetch settings:", error);
+                    }
+                };
+
+                const loginAdmin = () => {
+                    if (adminPassword.value === 'jhanan') {
+                        isAdminAuthenticated.value = true;
+                        loginError.value = '';
+                        adminPassword.value = '';
+                        fetchData();
+                    } else {
+                        loginError.value = 'Invalid password.';
+                    }
+                };
+
+                const logoutAdmin = () => {
+                    isAdminAuthenticated.value = false;
+                };
+
+
+                const people = ref([]);
+                const relationships = ref([]);
+                const suggestions = ref([]);
+                const settingsSaveMessage = ref('');
+
+                const newPerson = ref({ firstName: '', lastName: '', birthYear: null, deathYear: null });
+                const newRel = ref({ person1Id: null, person2Id: null, type: 'parent_child' });
+
+                const fetchData = async () => {
+                    if (isAdminAuthenticated.value) {
+                        const pRes = await fetch('/api/people');
+                        people.value = await pRes.json();
+
+                        const rRes = await fetch('/api/relationships');
+                        relationships.value = await rRes.json();
+
+                        const sRes = await fetch('/api/suggestions');
+                        suggestions.value = await sRes.json();
+                    }
+                };
+
+                const saveSettings = async () => {
+                    for (const [key, value] of Object.entries(settings.value)) {
+                        await fetch('/api/settings', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ key, value })
+                        });
+                    }
+                    settingsSaveMessage.value = 'Settings saved successfully!';
+                    setTimeout(() => settingsSaveMessage.value = '', 3000);
+                };
+
+                const addPerson = async () => {
+                    await fetch('/api/people', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(newPerson.value)
+                    });
+                    newPerson.value = { firstName: '', lastName: '', birthYear: null, deathYear: null };
+                    fetchData();
+                };
+
+                const deletePerson = async (id) => {
+                    if (confirm('Delete this person and all their relationships?')) {
+                        await fetch('/api/people/' + id, { method: 'DELETE' });
+                        fetchData();
+                    }
+                };
+
+                const addRelationship = async () => {
+                    if (newRel.value.person1Id === newRel.value.person2Id) {
+                        alert("Cannot create relationship to self.");
+                        return;
+                    }
+                    await fetch('/api/relationships', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(newRel.value)
+                    });
+                    newRel.value = { person1Id: null, person2Id: null, type: 'parent_child' };
+                    fetchData();
+                };
+
+                const deleteRelationship = async (id) => {
+                    if (confirm('Delete this relationship?')) {
+                        await fetch('/api/relationships/' + id, { method: 'DELETE' });
+                        fetchData();
+                    }
+                };
+
+                const handleSuggestion = async (id, status) => {
+                    await fetch('/api/suggestions/' + id, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status })
+                    });
+                    fetchData();
+                };
+
+                const getPersonName = (id) => {
+                    const p = people.value.find(p => p.id === id);
+                    return p ? p.firstName + ' ' + p.lastName : 'Unknown';
+                };
+
+                const formatSuggestionData = (data) => {
+                    return JSON.stringify(data, null, 2).replace(/[{"}]/g, '');
+                };
+
+                const newSuggestion = ref({
+                    type: 'add_person',
+                    suggesterName: '',
+                    data: {}
+                });
+                const suggestionStatus = ref(null);
+
+                // Watcher to clear data when type changes
+                Vue.watch(() => newSuggestion.value.type, () => {
+                    newSuggestion.value.data = {};
+                });
+
+                const submitSuggestion = async () => {
+                    try {
+                        const payload = {
+                            type: newSuggestion.value.type,
+                            suggesterName: newSuggestion.value.suggesterName || 'Anonymous',
+                            ...newSuggestion.value.data
+                        };
+
+                        const res = await fetch('/api/suggestions', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (res.ok) {
+                            suggestionStatus.value = { success: true, message: 'Suggestion submitted successfully! Thank you.' };
+                            newSuggestion.value = { type: 'add_person', suggesterName: '', data: {} };
+                        } else {
+                            suggestionStatus.value = { success: false, message: 'Failed to submit suggestion. Please try again.' };
+                        }
+                    } catch (e) {
+                        suggestionStatus.value = { success: false, message: 'An error occurred while submitting.' };
+                    }
+                    setTimeout(() => suggestionStatus.value = null, 5000);
+                };
+
+
+
+                onMounted(() => {
+                    fetchSettings();
+                    fetchPublicTreeData();
+                });
+
+                return {
+                    currentPage,
+                    mobileMenuOpen,
+                    settings,
+                    adminPassword,
+                    isAdminAuthenticated,
+                    loginError,
+                    loginAdmin,
+                    logoutAdmin,
+                    people,
+                    relationships,
+                    suggestions,
+                    settingsSaveMessage,
+                    newPerson,
+                    newRel,
+                    saveSettings,
+                    addPerson,
+                    deletePerson,
+                    addRelationship,
+                    deleteRelationship,
+                    handleSuggestion,
+                    getPersonName,
+                    formatSuggestionData,
+                    newSuggestion,
+                    suggestionStatus,
+                    submitSuggestion,
+                    treeData,
+                    treeLines,
+                    loadingTree,
+                    selectedPerson,
+                    selectedPersonDetails,
+                    getDashArray
+                };
+            }
+        })
+        .component('tree-node', TreeNode)
+        .mount('#app');
+    </script>
+</body>
+</html>
