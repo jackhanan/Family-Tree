@@ -1,5 +1,5 @@
 
-<h2 class="sr-only">Family tree — password-protected admin, simplified person fields, tree rename</h2>
+
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 @import url('https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css');
@@ -247,20 +247,20 @@ body { background: var(--color-background-tertiary); font-family: var(--font-san
             <line v-for="l in spouseLines" :key="l.k" :x1="l.x1" :y1="l.y1" :x2="l.x2" :y2="l.y2" stroke="#7C3AED" stroke-width="2" stroke-dasharray="7 3" opacity=".6"/>
             <line v-for="l in juncLines" :key="l.k" :x1="l.x1" :y1="l.y1" :x2="l.x2" :y2="l.y2" stroke="var(--color-border-secondary)" stroke-width="2"/>
           </svg>
-          <div v-for="p in people" :key="p.id" v-if="pos[p.id]" class="pcard" :style="cardSt(p)" @click.stop="openModal(p.id)">
+          <template v-for="p in people" :key="p?.id"><div v-if="pos[p?.id]" class="pcard" :style="cardSt(p)" @click.stop="openModal(p?.id)">
             <div class="av" :style="avSt(p)" style="width:42px;height:42px;font-size:13px">{{ini(p)}}</div>
             <div style="flex:1;min-width:0">
               <div class="cname"><span v-if="p.deathYear" class="dec">✝</span>{{fn(p)}}</div>
               <div class="cyrs">{{yrs(p)}}</div>
               <div class="ccta" :style="`color:${gc(p.gender).accent}`">View profile <i class="ti ti-chevron-right" style="font-size:9px" aria-hidden="true"></i></div>
             </div>
-          </div>
+          </div></template>
         </div>
         <div class="sw">
           <i class="ti ti-search sico" aria-hidden="true"></i>
           <input class="sinp" v-model="srchQ" placeholder="Search family members…" @focus="showSR=true" @blur="setSRtimer" aria-label="Search">
           <div v-if="showSR&&srchRes.length" class="sres">
-            <div v-for="p in srchRes" :key="p.id" class="sri" @mousedown.prevent="panTo(p.id);openModal(p.id)">
+            <div v-for="p in srchRes" :key="p?.id" class="sri" @mousedown.prevent="panTo(p?.id);openModal(p?.id)">
               <div class="av" :style="avSt(p)" style="width:24px;height:24px;font-size:9px">{{ini(p)}}</div>
               <div><div style="font-weight:500">{{fn(p)}}</div><div style="font-size:10px;color:var(--color-text-tertiary)">{{yrs(p)}}</div></div>
             </div>
@@ -300,7 +300,7 @@ body { background: var(--color-background-tertiary); font-family: var(--font-san
           <div class="fg"><label class="fl">Related to</label>
             <select v-model="sgF.relatedTo" aria-label="Related to person">
               <option value="">— Select a person —</option>
-              <option v-for="p in people" :key="p.id" :value="p.id">{{fn(p)}}</option>
+              <option v-for="p in people" :key="p?.id" :value="p.id">{{fn(p)}}</option>
             </select>
           </div>
           <div class="fg"><label class="fl">Relationship</label><input v-model="sgF.relation" placeholder="e.g. Mother of, Child of…" aria-label="Relationship"></div>
@@ -338,15 +338,15 @@ body { background: var(--color-background-tertiary); font-family: var(--font-san
             <div class="shdr"><h3>Family members</h3><button class="addbtn" @click="openPF(null)"><i class="ti ti-plus" aria-hidden="true"></i> Add person</button></div>
             <div v-if="!people.length" class="empty-s" style="height:200px"><i class="ti ti-user-plus" aria-hidden="true"></i><p>No people yet — click "Add person" to begin.</p></div>
             <div class="ilist">
-              <div v-for="p in people" :key="p.id" class="icard">
+              <div v-for="p in people" :key="p?.id" class="icard">
                 <div class="av" :style="avSt(p)" style="width:36px;height:36px;font-size:12px;flex-shrink:0">{{ini(p)}}</div>
                 <div class="iinf">
                   <div class="inm">{{fn(p)}}</div>
-                  <div class="isb">{{yrs(p)||'No year'}} · {{relCnt(p.id)}} link{{relCnt(p.id)!==1?'s':''}}</div>
+                  <div class="isb">{{yrs(p)||'No year'}} · {{relCnt(p?.id)}} link{{relCnt(p?.id)!==1?'s':''}}</div>
                 </div>
                 <div class="iact">
                   <button class="ab" @click="openPF(p)"><i class="ti ti-edit" aria-hidden="true"></i> Edit</button>
-                  <button class="ab dl" @click="delPerson(p.id)"><i class="ti ti-trash" aria-hidden="true"></i></button>
+                  <button class="ab dl" @click="delPerson(p?.id)"><i class="ti ti-trash" aria-hidden="true"></i></button>
                 </div>
               </div>
             </div>
@@ -435,7 +435,7 @@ body { background: var(--color-background-tertiary); font-family: var(--font-san
           <template v-for="(rel,lbl) in selRels" :key="lbl">
             <div v-if="rel.length" class="rsec">
               <div class="rlbl">{{lbl}}</div>
-              <div v-for="rp in rel" :key="rp.id" class="rchip" @click="selId=rp.id">
+              <div v-for="rp in rel" :key="rp?.id" class="rchip" @click="selId=rp.id">
                 <div class="av" :style="avSt(rp)" style="width:28px;height:28px;font-size:10px">{{ini(rp)}}</div>
                 <div style="flex:1"><div style="font-weight:500;font-size:12px">{{fn(rp)}}</div><div style="font-size:10px;color:var(--color-text-secondary)">{{yrs(rp)}}</div></div>
                 <i class="ti ti-chevron-right" style="font-size:11px;color:var(--color-text-tertiary)" aria-hidden="true"></i>
@@ -489,14 +489,14 @@ body { background: var(--color-background-tertiary); font-family: var(--font-san
           <div class="fg"><label class="fl">{{rf.type==='parent-child'?'Parent':'Person 1'}}</label>
             <select v-model="rf.person1Id" aria-label="First person">
               <option value="">— Select —</option>
-              <option v-for="p in people" :key="p.id" :value="p.id">{{fn(p)}}</option>
+              <option v-for="p in people" :key="p?.id" :value="p.id">{{fn(p)}}</option>
             </select>
           </div>
           <div style="text-align:center;font-size:20px;color:var(--color-text-tertiary);padding:4px 0"><i :class="rf.type==='spouse'?'ti ti-heart':'ti ti-arrow-down'" aria-hidden="true"></i></div>
           <div class="fg"><label class="fl">{{rf.type==='parent-child'?'Child':'Person 2'}}</label>
             <select v-model="rf.person2Id" aria-label="Second person">
               <option value="">— Select —</option>
-              <option v-for="p in people.filter(x=>x.id!==rf.person1Id)" :key="p.id" :value="p.id">{{fn(p)}}</option>
+              <option v-for="p in people.filter(x=>x && x.id!==rf.person1Id)" :key="p?.id" :value="p?.id">{{fn(p)}}</option>
             </select>
           </div>
         </div>
@@ -516,13 +516,21 @@ const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const GC={male:{bg:'#eff6ff',border:'#93c5fd',accent:'#2563eb',text:'white'},female:{bg:'#fdf2f8',border:'#f9a8d4',accent:'#db2777',text:'white'}};
 const gc=g=>GC[g]||GC.male;
 
+
+if (!window.storage) {
+  window.storage = {
+    get: async (key) => ({ value: localStorage.getItem(key) }),
+    set: async (key, val) => localStorage.setItem(key, val)
+  };
+}
 async function loadDB(){try{const r=await window.storage.get('ftree_v4');return r?.value?JSON.parse(r.value):{people:[],relationships:[],suggestions:[],config:{treeName:'Family Tree',adminPassword:'admin'}}}catch{return{people:[],relationships:[],suggestions:[],config:{treeName:'Family Tree',adminPassword:'admin'}}}}
+
 async function saveDB(d){try{await window.storage.set('ftree_v4',JSON.stringify(d))}catch(e){console.error(e)}}
 
 function buildGraph(people,rels){
   const co={},po={},so={};
-  people.forEach(p=>{co[p.id]=[];po[p.id]=[];so[p.id]=[]});
-  const ids=new Set(people.map(p=>p.id));
+  people.forEach(p=>{if(p){co[p.id]=[];po[p.id]=[];so[p.id]=[]}});
+  const ids=new Set(people.map(p=>p?.id).filter(Boolean));
   rels.forEach(r=>{
     if(!ids.has(r.person1Id)||!ids.has(r.person2Id))return;
     if(r.type==='parent-child'){co[r.person1Id].push(r.person2Id);po[r.person2Id].push(r.person1Id)}
@@ -535,14 +543,14 @@ function computeLayout(people,rels){
   if(!people.length)return{};
   const{co,po,so}=buildGraph(people,rels);
   const lv={};
-  const roots=people.filter(p=>!po[p.id].length).map(p=>p.id);
+  const roots=people.filter(p=>p && po[p.id] && !po[p.id].length).map(p=>p.id);
   if(!roots.length)roots.push(people[0].id);
   roots.forEach(id=>lv[id]=0);
   const q=[...roots],seen=new Set(roots);
   while(q.length){const id=q.shift();co[id].forEach(cid=>{const nl=(lv[id]??0)+1;if(!seen.has(cid)){seen.add(cid);lv[cid]=nl;q.push(cid)}else if(lv[cid]<nl){lv[cid]=nl;q.push(cid)}})}
-  people.forEach(p=>{if(!(p.id in lv))lv[p.id]=0});
-  for(let i=0;i<20;i++){let ch=false;people.forEach(p=>{so[p.id].forEach(s=>{if(lv[s]!==lv[p.id]){const m=Math.min(lv[p.id],lv[s]);lv[p.id]=m;lv[s]=m;ch=true}})});if(!ch)break}
-  const byl={};people.forEach(p=>{const l=lv[p.id];(byl[l]=byl[l]||[]).push(p.id)});
+  people.forEach(p=>{if(p && !(p.id in lv))lv[p.id]=0});
+  for(let i=0;i<20;i++){let ch=false;people.forEach(p=>{if(p && so[p.id]){so[p.id].forEach(s=>{if(lv[s]!==lv[p.id]){const m=Math.min(lv[p.id],lv[s]);lv[p.id]=m;lv[s]=m;ch=true}})}});if(!ch)break}
+  const byl={};people.forEach(p=>{if(!p)return;const l=lv[p.id];(byl[l]=byl[l]||[]).push(p.id)});
   const groups={};const used=new Set();
   Object.keys(byl).sort((a,b)=>+a-+b).forEach(ls=>{
     const l=+ls,ids=byl[l],gs=[];used.clear();
@@ -588,8 +596,8 @@ createApp({
 
     const pos=computed(()=>computeLayout(people.value,relationships.value));
     const graph=computed(()=>buildGraph(people.value,relationships.value));
-    const svgW=computed(()=>{const v=Object.values(pos.value);return v.length?Math.max(...v.map(p=>p.x))+CW+200:2000});
-    const svgH=computed(()=>{const v=Object.values(pos.value);return v.length?Math.max(...v.map(p=>p.y))+CH+200:1500});
+    const svgW=computed(()=>{const v=Object.values(pos.value).filter(Boolean);return v.length?Math.max(...v.map(p=>p.x))+CW+200:2000});
+    const svgH=computed(()=>{const v=Object.values(pos.value).filter(Boolean);return v.length?Math.max(...v.map(p=>p.y))+CH+200:1500});
 
     const spouseLines=computed(()=>{
       const lines=[],done=new Set();
@@ -619,22 +627,22 @@ createApp({
         let jx,jy;
         if(pp.length===2){jx=(pp[0].x+CW/2+pp[1].x+CW/2)/2;jy=Math.max(pp[0].y,pp[1].y)+CH+(VG*.4)}
         else{jx=pp[0].x+CW/2;jy=pp[0].y+CH+(VG*.4)}
-        pp.forEach(p=>lines.push({k:`p${p.x}${p.y}${key}`,x1:p.x+CW/2,y1:p.y+CH,x2:jx,y2:jy}));
+        pp.forEach(p=>{if(p)lines.push({k:`p${p.x}${p.y}${key}`,x1:p.x+CW/2,y1:p.y+CH,x2:jx,y2:jy})});
         if(cp.length>1){
           const lx=Math.min(...cp.map(p=>p.x+CW/2)),rx=Math.max(...cp.map(p=>p.x+CW/2)),by=jy+(VG*.22);
           lines.push({k:'jv'+key,x1:jx,y1:jy,x2:jx,y2:by});
           lines.push({k:'hb'+key,x1:lx,y1:by,x2:rx,y2:by});
-          cp.forEach(p=>lines.push({k:'cv'+p.x+p.y,x1:p.x+CW/2,y1:by,x2:p.x+CW/2,y2:p.y}));
+          cp.forEach(p=>{if(p)lines.push({k:'cv'+p.x+p.y,x1:p.x+CW/2,y1:by,x2:p.x+CW/2,y2:p.y})});
         }else{lines.push({k:'sv'+key,x1:jx,y1:jy,x2:cp[0].x+CW/2,y2:cp[0].y})}
       });
       return lines;
     });
 
-    const selP=computed(()=>people.value.find(p=>p.id===selId.value));
+    const selP=computed(()=>people.value.find(p=>p && p.id===selId.value));
     const selRels=computed(()=>{
       const p=selP.value;if(!p)return{};
       const{co,po,so}=graph.value;
-      const find=id=>people.value.find(x=>x.id===id);
+      const find=id=>people.value.find(x=>x && x.id===id);
       const parents=(po[p.id]||[]).map(find).filter(Boolean);
       const spouses=(so[p.id]||[]).map(find).filter(Boolean);
       const children=(co[p.id]||[]).map(find).filter(Boolean);
@@ -647,15 +655,15 @@ createApp({
       if(children.length)out['Children']=children;
       return out;
     });
-    const srchRes=computed(()=>{if(!srchQ.value.trim())return[];const q=srchQ.value.toLowerCase();return people.value.filter(p=>fn(p).toLowerCase().includes(q)).slice(0,7)});
+    const srchRes=computed(()=>{if(!srchQ.value.trim())return[];const q=srchQ.value.toLowerCase();return people.value.filter(p=>p && fn(p).toLowerCase().includes(q)).slice(0,7)});
 
-    const fn=p=>{let n=p.firstName||'';if(p.middleInitial)n+=` ${p.middleInitial.charAt(0).toUpperCase()}.`;if(p.lastName)n+=` ${p.lastName}`;return n.trim()||'Unknown'};
-    const ini=p=>((p.firstName?.[0]||'')+(p.lastName?.[0]||'')).toUpperCase()||'?';
-    const yrs=p=>{const b=p.birthYear?`b. ${p.birthYear}`:'';const d=p.deathYear?`d. ${p.deathYear}`:'';return[b,d].filter(Boolean).join(' · ')};
-    const avSt=p=>{const c=gc(p.gender);return`background:${c.accent};color:${c.text};border:.5px solid ${c.border}`};
-    const cardSt=p=>{const c=gc(p.gender),p2=pos.value[p.id];if(!p2)return'display:none';return`left:${p2.x}px;top:${p2.y}px;width:${CW}px;min-height:${CH}px;background:#ffffff;border-color:${c.border};border-width:2px;`};
+    const fn=p=>{if(!p)return'';let n=p.firstName||'';if(p.middleInitial)n+=` ${p.middleInitial.charAt(0).toUpperCase()}.`;if(p.lastName)n+=` ${p.lastName}`;return n.trim()||'Unknown'};
+    const ini=p=>{if(!p)return'?';return((p.firstName?.[0]||'')+(p.lastName?.[0]||'')).toUpperCase()||'?';};
+    const yrs=p=>{if(!p)return'';const b=p.birthYear?`b. ${p.birthYear}`:'';const d=p.deathYear?`d. ${p.deathYear}`:'';return[b,d].filter(Boolean).join(' · ')};
+    const avSt=p=>{if(!p)return'';const c=gc(p.gender);return`background:${c.accent};color:${c.text};border:.5px solid ${c.border}`};
+    const cardSt=p=>{if(!p)return'display:none';const c=gc(p.gender),p2=pos.value[p.id];if(!p2)return'display:none';return`left:${p2.x}px;top:${p2.y}px;width:${CW}px;min-height:${CH}px;background:#ffffff;border-color:${c.border};border-width:2px;`};
     const relCnt=id=>relationships.value.filter(r=>r.person1Id===id||r.person2Id===id).length;
-    const pName=id=>{const p=people.value.find(x=>x.id===id);return p?fn(p):id};
+    const pName=id=>{const p=people.value.find(x=>x && x.id===id);return p?fn(p):id};
 
     async function persist(){
       saveStatus.value='saving';
@@ -663,9 +671,9 @@ createApp({
       saveStatus.value='saved';setTimeout(()=>saveStatus.value='',1800);
     }
     function checkPw(){if(pwIn.value===cfg.adminPassword){adminAuth.value=true;pwErr.value=false;pwIn.value=''}else{pwErr.value=true}}
-    function changePw(){pwChgErr.value='';pwChgOk.value=false;if(!np1.value.trim()){pwChgErr.value='Password cannot be empty.';return}if(np1.value!==np2.value){pwChgErr.value='Passwords do not match.';return}cfg.adminPassword=np1.value;np1.value='';np2.value='';pwChgOk.value=true;persist()}
+    function changePw(){pwChgErr.value='';pwChgOk.value=false;if(!np1.value.trim()){pwChgErr.value='Password cannot be empty.';return}if(np1.value!==np2.value){pwChgErr.value='Passwords do not match.';return}cfg.adminPassword=np1.value;np1.value='';np2.value='';pwChgOk.value=true;persist();setTimeout(()=>pwChgOk.value=false,2500);}
     async function saveTreeName(){if(!stName.value.trim())return;cfg.treeName=stName.value.trim();stMsg.value='Tree name updated!';await persist();setTimeout(()=>stMsg.value='',2500)}
-    function centerView(){const vals=Object.values(pos.value);if(!vals.length)return;const xs=vals.map(p=>p.x);const midX=(Math.min(...xs)+Math.max(...xs)+CW)/2;const vw=treeVP.value?.offsetWidth||680,vh=treeVP.value?.offsetHeight||500;tx.value=vw/2-midX;ty.value=Math.max(60,vh*.08);ts.value=1}
+    function centerView(){const vals=Object.values(pos.value);if(!vals.length)return;const xs=vals.filter(Boolean).map(p=>p.x);const midX=(Math.min(...xs)+Math.max(...xs)+CW)/2;const vw=treeVP.value?.offsetWidth||680,vh=treeVP.value?.offsetHeight||500;tx.value=vw/2-midX;ty.value=Math.max(60,vh*.08);ts.value=1}
     function zoom(f){ts.value=Math.max(.1,Math.min(3,ts.value*f))}
     function onMD(e){if(e.button!==0)return;isDragging.value=true;drag={sx:e.clientX,sy:e.clientY,tx:tx.value,ty:ty.value,moved:false}}
     function onMM(e){if(!drag)return;const dx=e.clientX-drag.sx,dy=e.clientY-drag.sy;if(Math.abs(dx)>2||Math.abs(dy)>2)drag.moved=true;if(drag.moved){tx.value=drag.tx+dx;ty.value=drag.ty+dy}}
@@ -678,8 +686,8 @@ createApp({
     function openModal(id){selId.value=id}
     function panTo(id){const p=pos.value[id];if(!p)return;const vw=treeVP.value?.offsetWidth||680,vh=treeVP.value?.offsetHeight||500;tx.value=vw/2-(p.x+CW/2)*ts.value;ty.value=vh/2-(p.y+CH/2)*ts.value;srchQ.value='';showSR.value=false}
     function openPF(p){editP.value=p;Object.assign(pf,p?{...p}:emptyP());showPF.value=true}
-    async function savePerson(){if(!pf.firstName.trim()||!pf.lastName.trim())return alert('First and last name are required.');const d={...pf};if(editP.value){people.value=people.value.map(p=>p.id===d.id?d:p)}else{people.value=[...people.value,{...d,id:uid()}]}showPF.value=false;await persist()}
-    async function delPerson(id){if(!confirm('Delete this person and all their relationships?'))return;people.value=people.value.filter(p=>p.id!==id);relationships.value=relationships.value.filter(r=>r.person1Id!==id&&r.person2Id!==id);await persist()}
+    async function savePerson(){if(!pf.firstName.trim()||!pf.lastName.trim())return alert('First and last name are required.');const d={...pf};if(editP.value){people.value=people.value.map(p=>(p && p.id===d.id)?d:p)}else{people.value=[...people.value,{...d,id:uid()}]}showPF.value=false;await persist()}
+    async function delPerson(id){if(!confirm('Delete this person and all their relationships?'))return;people.value=people.value.filter(p=>p && p.id!==id);relationships.value=relationships.value.filter(r=>r.person1Id!==id&&r.person2Id!==id);await persist()}
     function openRF(r){editR.value=r;Object.assign(rf,r?{...r}:emptyR());showRF.value=true}
     async function saveRel(){if(!rf.person1Id||!rf.person2Id)return alert('Please select both people.');if(rf.person1Id===rf.person2Id)return alert('A person cannot relate to themselves.');const dup=relationships.value.find(r=>r.id!==rf.id&&r.type===rf.type&&((r.person1Id===rf.person1Id&&r.person2Id===rf.person2Id)||(r.type==='spouse'&&r.person1Id===rf.person2Id&&r.person2Id===rf.person1Id)));if(dup)return alert('This relationship already exists.');const d={...rf};if(editR.value){relationships.value=relationships.value.map(r=>r.id===d.id?d:r)}else{relationships.value=[...relationships.value,{...d,id:uid()}]}showRF.value=false;await persist()}
     async function delRel(id){if(!confirm('Remove this relationship?'))return;relationships.value=relationships.value.filter(r=>r.id!==id);await persist()}
